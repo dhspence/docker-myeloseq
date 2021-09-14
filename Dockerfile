@@ -3,11 +3,17 @@ MAINTAINER David Spencer <dspencer@wustl.edu>
 
 LABEL Image for basic ad-hoc bioinformatic analyses
 
-#some basic tools
+ARG DEBIAN_FRONTEND=noninteractive
+
+#set timezone to CDT
+RUN ln -sf /usr/share/zoneinfo/America/Chicago /etc/localtime
+RUN echo "America/Chicago" > /etc/timezone
+
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
     build-essential \
     bzip2 \
     curl \
+    wget \
     g++ \
     less \
     libcurl4-openssl-dev \
@@ -36,10 +42,8 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
     libnss-sss && \
     apt-get clean all
 
-#set timezone to CDT
-RUN ln -sf /usr/share/zoneinfo/America/Chicago /etc/localtime
-RUN echo "America/Chicago" > /etc/timezone
 RUN dpkg-reconfigure --frontend noninteractive tzdata
+
 
 # Install Python 3 packages available through pip 
 RUN pip install numpy && \
@@ -63,7 +67,7 @@ RUN ln -s $(which python3) /usr/local/bin/python
 ENV HTSLIB_INSTALL_DIR=/opt/htslib
 
 WORKDIR /tmp
-RUN wget https://github.com/samtools/samtools/releases/download/1.13/samtools-1.13.tar.bz2 && \
+RUN wget https://github.com/samtools/htslib/releases/download/1.13/htslib-1.13.tar.bz2 && \
     tar --bzip2 -xvf htslib-1.13.tar.bz2 && \
     cd /tmp/htslib-1.13 && \
     ./configure  --enable-plugins --prefix=$HTSLIB_INSTALL_DIR && \
@@ -82,7 +86,7 @@ ENV SAMTOOLS_INSTALL_DIR=/opt/samtools
 WORKDIR /tmp
 RUN wget https://github.com/samtools/samtools/releases/download/1.13/samtools-1.13.tar.bz2 && \
     tar --bzip2 -xf samtools-1.13.tar.bz2 && \
-    cd /tmp/samtools-1.5 && \
+    cd /tmp/samtools-1.13 && \
     ./configure --with-htslib=$HTSLIB_INSTALL_DIR --prefix=$SAMTOOLS_INSTALL_DIR && \
     make && \
     make install && \
@@ -105,8 +109,24 @@ RUN wget https://github.com/samtools/bcftools/releases/download/1.13/bcftools-1.
     cd / && \
     rm -rf /tmp/bcftools-1.13
 
+################
+#freebayes 1.3.4#
+################
+
 WORKDIR /tmp
 RUN wget https://github.com/freebayes/freebayes/releases/download/v1.3.4/freebayes-1.3.4-linux-static-AMD64.gz && \
    gunzip freebayes-1.3.4-linux-static-AMD64.gz && \
    cp freebayes-1.3.4-linux-static-AMD64 /usr/local/bin/freebayes
 
+################
+#tagbam        #
+################
+
+RUN apt-get install -y git
+
+WORKDIR /tmp
+RUN git clone https://github.com/dhspence/tagbam.git && cd /tmp/tagbam && \
+    gcc tagbam.c cgranges.c -o tagbam -lhts -lz && \
+    mv tagbam /usr/local/bin && \
+    rm -Rf /tmp/tagbam
+    
